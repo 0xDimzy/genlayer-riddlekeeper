@@ -99,14 +99,16 @@ this contract's balance and settles on finalization. The ledger is
 updated only *after* the transfer message is emitted, so a failed
 emission reverts the whole call and no winnings are lost.
 
-Caveat: **GenLayer Studio's sandbox states it does not support token
-transfers.** In Studio, `claim_winnings()` may fail at the transfer step
-(the winnings stay safely in the ledger, readable via `get_winnings`).
-Verify the payout on **Bradbury** (or in the `gltest` harness — see
-`test_set_riddle_after_win_and_claim` in `tests/test_riddle_keeper.py`,
-which asserts the transfer end-to-end following
-`test_faucet_eoa_transfer.py`). The winnings ledger itself works
-identically on every network.
+**Verified live in Studio (Studionet, 2026-11-26):** after a wrong
+answer (100 GEN stake → pool) and a correct answer ("echo", 100 GEN
+stake → winnings 200 GEN), `claim_winnings()` transferred exactly
+200 GEN to the winner (tx `0x47b35b5d06cca4facc0313009c9b872f57cdb4c59ab38f85fdd28d5f5910cb49`,
+FINALIZED). Afterwards `get_winnings` = 0, `get_claimed` = 200 GEN,
+`get_contract_balance` = 0. The earlier Studio caveat (sandbox "does
+not support token transfers") turned out not to apply here — the
+transfer works on Studionet. It is also covered by the `gltest`
+harness test `test_set_riddle_after_win_and_claim` in
+`tests/test_riddle_keeper.py`.
 
 ## Tests
 
@@ -128,6 +130,17 @@ identically on every network.
 
 Verified 2026-11-26: `python3 -m py_compile` passes on all files and
 `test_contract_static.py` reports **all checks passed** (exit 0).
+**Live in GenLayer Studio (Studionet, Chain ID 61999):** contract
+`0x16A84c3e070b89405ffE2bfAE9c4C8Fe8b88ac7a` — deploy FINALIZED
+(tx `0x8a547fd5a234ccbaecd940432a45d0737ab2659adc670c19b27ee093063ecb04`);
+wrong answer "wind" → pool 100 GEN; correct answer "echo" →
+winner +200 GEN winnings, round 2, riddle cleared (validators:
+3 agree, `MAJORITY_AGREE`); `claim_winnings()` → 200 GEN transferred
+(tx `0x47b35b5d06cca4facc0313009c9b872f57cdb4c59ab38f85fdd28d5f5910cb49`),
+`get_winnings` = 0, `get_claimed` = 200 GEN, contract balance 0;
+keeper `set_riddle` → round 2 live with the "footsteps" riddle.
+Studio: https://studio.genlayer.com/?import-contract=0x16A84c3e070b89405ffE2bfAE9c4C8Fe8b88ac7a ·
+Explorer: https://explorer-studio.genlayer.com/address/0x16a84c3e070b89405ffe2bfae9c4c8fe8b88ac7a
 
 ## API surface — every call confirmed, with sources
 
@@ -136,7 +149,7 @@ the GenLayer docs, fetched 2026-11-26:
 
 | Call | Source |
 | --- | --- |
-| `# v0.3.0` + `Depends: py-genlayer:9b8kjy…9p0` | header of every example contract on main |
+| `# v0.4.0` + `Depends: py-genlayer:kzybg95x1gn21dw72m7hyg0maaap04n4nx55j9yt6fkdqxtz6bz0` | header as deployed in Studio — Studio's GenVM v0.4.0-rc1 rejects the v0.3.0 header (`invalid_contract runner malformed`); the Studio built-in wizard template pins this hash |
 | `gl.contract.Contract`, `from genlayer.types import *` | `llm_erc20.py`, `tip_jar.py` |
 | `gl.storage.TreeMap[Address, u256]`, `.get(key, 0)`, `.items()` | `llm_erc20.py` |
 | `gl.message.sender_address` (`.as_hex`) | `tip_jar.py`, `llm_erc20.py` — note: the repo has no `gl.message.sender` |
